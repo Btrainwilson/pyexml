@@ -30,7 +30,10 @@ class MetricSpaceDataset(DynamicDataset):
             if type(precompute) == Boolean and precompute == True:
                 self.preCompute()
             elif type(precompute) != Boolean:
-                self.H = precompute
+                if subspace is not None:
+                    self.H = np.squeeze(precompute[np.meshgrid(subspace)])
+                else:
+                    self.H = precompute
             else:
                 self.precompute = False
         

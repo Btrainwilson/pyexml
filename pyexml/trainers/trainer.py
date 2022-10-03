@@ -4,6 +4,7 @@ from ..geometry.maps.utils import optimal_diffeomorphism_LSA
 from pyexlab.utils import get_info
 from ..datasets.utils import DataMode
 import numpy as np
+import copy
 
 class Trainer():
     __name__ = "Trainer"
@@ -63,7 +64,7 @@ class Trainer():
         self.info_dict['Scheduler Name'] = type(self.scheduler).__name__
         
         if self.model_save_mod != -1 and epoch % self.model_save_mod == 0:
-            self.info_dict['Model State'].append(self.model.state_dict())
+            self.info_dict['Model State'].append(copy.deepcopy(self.model.state_dict()))
 
         return self.info_dict
 
@@ -90,6 +91,7 @@ class Tester():
             return self.loss()
 
     def loss(self):
+        
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=4, shuffle=True)
 
         loss_sum = 0

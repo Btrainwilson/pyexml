@@ -9,9 +9,9 @@ def plot_loss(data, axis, title="Metric Training Loss", label="Dynamic", xlabel=
     axis.set_ylabel(ylabel)
     axis.legend()
 
-def scatter_XY(X,Y, axis, title="Metric Training Loss", label="Dynamic", xlabel="Epoch", ylabel="Loss"):
+def scatter_XY(X,Y, axis, title="Metric Training Loss", label="Dynamic", xlabel="Epoch", ylabel="Loss", s = 0.05):
     axis.set_title(title)
-    axis.scatter(X, Y, label=label)
+    axis.scatter(X, Y, label=label, s=s)
     axis.set_xlabel(xlabel)
     axis.set_ylabel(ylabel)
     axis.legend()

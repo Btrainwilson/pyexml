@@ -9,25 +9,21 @@ class NeuralNetSubject(pylab.TestSubject):
         self.trainer = trainer
         
         #Initialize Neural Net Values
-        self.test_dict['time']['loss'] = []
+        self.test_dict['Measurements']['Loss'] = []
 
-        self.test_dict['info']['trainer_name'] = self.trainer.__name__
-        self.test_dict['info']['trainer_info'] = self.trainer.info()
+        self.test_dict['Info']['Trainer'] = self.trainer.info()
 
-    def time_measure(self, epoch):
+    def measure(self, epoch):
 
         #Measure state at current epoch
-        super().time_measure(epoch)
+        super().measure(epoch=epoch)
 
-        self.test_dict['time']['loss'].append(self.trainer(epoch = epoch))
-        self.test_dict['time']['trainer_info'] = self.trainer.info()
+        self.test_dict['Measurements']['Loss'].append(self.trainer(epoch = epoch))
+        self.test_dict['Info']['Trainer'] = self.trainer.info()
 
-        self.trainer.update(epoch)
+        self.test_dict['Measurements']['Trainer Measurement'] = self.trainer.update(epoch)
 
-        output_str = pylab.utils.dict_str_output(self.test_dict['time']['loss'][-1])
+        output_str = pylab.utils.dict_str_output(self.test_dict['Measurements']['Loss'][-1])
         
         return "%s Loss\n" %(self.__name__) + output_str
         
-
-class CoachNetSubject(NeuralNetSubject):
-    __name__ = "CoachNetSubject"
