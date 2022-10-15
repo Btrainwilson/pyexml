@@ -9,8 +9,7 @@ class NeuralNetSubject(pylab.TestSubject):
         self.trainer = trainer
         
         #Initialize Neural Net Values
-        self.test_dict['Measurements']['Loss'] = []
-
+        self.test_dict['Data'] = {}
         self.test_dict['Info']['Trainer'] = self.trainer.info()
 
     def measure(self, epoch):
@@ -18,12 +17,11 @@ class NeuralNetSubject(pylab.TestSubject):
         #Measure state at current epoch
         super().measure(epoch=epoch)
 
-        self.test_dict['Measurements']['Loss'].append(self.trainer(epoch = epoch))
-        self.test_dict['Info']['Trainer'] = self.trainer.info()
-
-        self.test_dict['Measurements']['Trainer Measurement'] = self.trainer.update(epoch)
-
-        output_str = pylab.utils.dict_str_output(self.test_dict['Measurements']['Loss'][-1])
+        self.test_dict['Data'].update(self.trainer(epoch = epoch))
+        self.test_dict['Info']['Trainer'].update(self.trainer.info())
         
-        return "%s Loss\n" %(self.__name__) + output_str
-        
+        out_str = ""
+        for trainer_id in self.test_dict['Data']:
+            out_str += "%s Loss: %f \n" % (trainer_id, self.test_dict['Data'][trainer_id]['Loss'][-1])
+
+        return out_str

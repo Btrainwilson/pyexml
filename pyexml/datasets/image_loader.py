@@ -50,3 +50,4 @@ class ImageLoader(Dataset):
             if (Image.open(dataset[index][0]).getbands() == ("R", "G", "B")): # Check Channels
                 datasetRGB.append(dataset[index])
         return datasetRGB
+

@@ -11,7 +11,7 @@ class MapDataset(Dataset):
         self.info_dict = {}
         self.info_dict['Name'] = "MapDataset"
         self.info_dict['Assignments'] = []
-        self.info_dict['subspace'] = subspace
+        self.info_dict['Subspace'] = subspace
 
         if subspace is not None:
             self.domain = domain[subspace]

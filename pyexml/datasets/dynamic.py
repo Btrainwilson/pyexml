@@ -4,14 +4,15 @@ import pyexlab.fileio as fio
 class DynamicDataset(Dataset):
     __name__ = "DynamicDataset"
     def __init__(self, dataset):
-        self.info_dict = {}
         
-
         if type(dataset) == str:
            self.dataset = fio.load_dataset(dataset)
 
         self.dataset = dataset
-        self.info_dict['len'] = len(self.dataset)
+
+        self.info_dict = {}
+        self.info_dict['Name'] = self.__name__
+        self.info_dict['Length'] = len(self.dataset)
     
     def __len__(self):
         return len(self.dataset)

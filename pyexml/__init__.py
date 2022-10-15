@@ -1,4 +1,4 @@
-__all__ = ["datasets", "models", "trainers","generators","geometry", "mlsubjects"]
+__all__ = ["datasets", "models", "trainers","generators","geometry", "mlsubjects", "utilities", "plot"]
 
 from . import datasets
 from . import generators
@@ -7,3 +7,4 @@ from . import mlsubjects
 from . import models
 from . import trainers
 from . import plot
+from . import utilities
