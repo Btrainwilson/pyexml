@@ -37,7 +37,6 @@ class MetricStaticFFWDSubject(NeuralNetSubject):
         self.init_trainers()
         self.build_subject()
 
-
     def build_subject(self, name = "Metric Static FFWD Map "):
 
         super().__init__(self.metric_coach, alt_name= name + self.connectivity)
@@ -156,6 +155,60 @@ class MetricStaticFFWDSubject(NeuralNetSubject):
         self.build_subject()
         
 
+class AAECNNSubject(NeuralNetSubject):
+
+    def __init__(self, image_path):
+
+        self.image_path = image_path
+
+        self.init_dataset()
+        self.init_trainers()
+        self.init_models()
+        self.build_subject()
+
+    def init_dataset(self):
+        #Image dataset
+        image_set = np.load(self.image_path)
+        image_set = np.concatenate((image_set, image_set), axis = 1)
+
+        n = len(image_set)
+        train_test_ratio = 0.7
+        subspace_ratio = 0.5
+
+        total_datasize = int(n * subspace_ratio)
+        cutoff_idx = int(total_datasize * train_test_ratio)
+
+        #Split Indeces for datasets
+        subset_idx = datasets.utils.split_indeces(n, cutoff_idx, total_datasize)
+
+        #Map datasets
+        self.training_dataset = datasets.DynamicDataset(image_set[subset_idx[0]])
+        self.testing_dataset = datasets.DynamicDataset(image_set[subset_idx[1]])
+        
+    def init_trainers(self):
+
+        #Construct trainers
+        self.aae_optimizer = torch.optim.SGD(self.aae.parameters(), lr=0.01)
+
+        self.aae_trainer = trainers.Trainer(model = self.aae, dataset = self.training_dataset, criterion = torch.nn.MSELoss(), optimizer = self.aae_optimizer, 
+                                                scheduler = torch.optim.lr_scheduler.ExponentialLR(self.aae_optimizer, gamma=0.99),
+                                                alt_name= "AAE Trainer")
+        self.aae_tester  = trainers.Tester(self.aae, self.testing_dataset, torch.nn.MSELoss(), alt_name= "AAE Tester")
+        
+        #Construct the coach that invokes the trainers at certain epochs
+        self.trainer_schedule = trainers.Modulus_Schedule([-1, -1])
+        self.trainer_list = [self.aae_trainer, self.aae_tester]
+
+        self.aae_coach = trainers.Coach(trainers=self.trainer_list, trainer_schedule=self.trainer_schedule)
+
+    def init_models(self):
+        self.encoder = models.DeepCNN()
+        self.decoder = models.DeepCNN()
+        self.aae = models.AutoEncoder(self.encoder, self.decoder)
+    
+    def build_subject(self, name = "AAE Subject"):
+        super().__init__(self.aae_coach, alt_name= name + self.connectivity)
+        
 class MetricDynamicFFWDSubject(NeuralNetSubject):
 
     def __init__(self, domain_path, image=None, metric_precompute_path=None, connectivity = 'random_partial', v_ratio = 0.2, train_ratio = 0.7, subspace_ratio = 0.2):

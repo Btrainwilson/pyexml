@@ -9,25 +9,52 @@ class RydbergModel(Model):
         self.start_type = start_type
         self.n = n
         self.R = self.init_X()
+        self.detuning = torch.unsqueeze(-1 * torch.autograd.Variable(torch.Tensor(np.random.normal(loc=0.0, scale=10, size=[self.n]))), dim=0)
+        self.C_6 = 1
 
     def init_X(self):
 
         if self.start_type == 'random':
-            R = torch.autograd.Variable(torch.Tensor(np.random.normal(loc=0.5, scale=0.25, size=[self.n, 2])))
+            R = torch.autograd.Variable(torch.Tensor(np.random.normal(loc=50, scale=0.25, size=[self.n, 2])))
 
         return R
 
     def forward(self, x):
+
+        X = torch.matmul(torch.transpose(x, dim0=1, dim1=2), x)
+
+        d = self.detuning * x
+        d_sum = torch.squeeze(torch.sum(d, dim=2))
+        
         diag = torch.diagflat(self.R)
     
-        diag_x = torch.unsqueeze(diag[:self.n, :self.n], dim=0)
-        diag_y = torch.unsqueeze(diag[self.n:, self.n:], dim=0)
+        diag_x = diag[:self.n, :self.n]
+        diag_y = diag[self.n:, self.n:]
 
-        diag_new = torch.unsqueeze(torch.cat((diag_x, diag_y), 0), dim=0)
+        R_x = torch.matmul(x, diag_x)
+        R_y = torch.matmul(x, diag_y)
 
-        R_p = torch.bmm(x, diag_new)
+        R_r = torch.cat((R_x, R_y), dim=1)
+        R_r = torch.transpose(R_r, dim0=1, dim1 = 2)
 
-        print(R_p)
+        R_r1 = torch.unsqueeze(R_r, dim=1)
+        R_r2 = torch.unsqueeze(R_r, dim=2)
+
+        R_r = R_r1 - R_r2
+
+        R_r = torch.square(R_r)
+
+        R_r = torch.sqrt(0.5 * torch.sum(R_r, dim = 3))
+        R_r = X * 0.5 * R_r
+        V1 = torch.nan_to_num(torch.reciprocal(R_r), posinf=0)
+
+        V2 = torch.pow(V1, 6) * self.C_6
+
+        return torch.sum(V2, dim=[1, 2]) + d_sum
+
+        
+
+        
 
 
 
