@@ -1,0 +1,36 @@
+import torch
+from torch import nn
+import torch.nn.functional as F
+
+class Generator(nn.Module):
+  def __init__(self):
+    super().__init__()
+    self.gen = nn.Sequential(
+    #
+    #
+    #
+    #
+    )
+  def forward(self, noise):
+    ####
+    return self.gen(x)
+    
+def get_noise(n_samples, input_dim, device='cpu'):
+
+  return torch.randn(n_samples, input_dim, device=device)
+  
+class Discriminator(nn.module):
+  def __init__(self, #######)
+    super().__init__()
+    self.disc = nn.Sequential(
+    #
+    #
+    #
+    #
+    )
+  def make_disc_block(self, ######)
+    if not final_layer:
+      ####
+    else:
+      ####
+    
