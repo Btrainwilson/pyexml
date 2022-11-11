@@ -54,3 +54,36 @@ class Discriminator(nn.Module):
         x = self.h_layers[i](x)
       disc_pred = self.h_layers[-1](x)
       return disc_pred.view(len(disc_pred), -1)
+
+
+    ###Functions###
+def get_input_dimensions(z_dim, dataset_shape, n_classes):
+  '''
+  z_dim: the length of the noise vector
+  dataset_shape: the shape of the dataset images (Channels, Width, Height)
+  n_classes: the number of classes in dataset
+  '''
+  generator_input_dim = z_dim + n_classes
+  discriminator_im_chan = dataset_shape[0] + n_classes
+  im_chan = dataset_shape[0]
+  return generator_input_dim, discriminator_im_chan, im_chan
+
+def weights_init(m):
+  '''
+  Initializes weights
+  '''
+  if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+      torch.nn.init.normal_(m.weight, 0.0, 0.02)
+  if isinstance(m, nn.BatchNorm2d):
+      torch.nn.init.normal_(m.weight, 0.0, 0.02)
+      torch.nn.init.constant_(m.bias, 0)
+
+def get_noise(n_samples, input_dim, device='cpu'):
+    return torch.randn(n_samples, input_dim, device=device)
+
+def get_one_hot_labels(labels, n_classes):
+    return F.one_hot(labels, n_classes)
+
+def combine_vectors(x, y):
+    combined = torch.cat((x.float(), y.float()), 1)
+    return combined
