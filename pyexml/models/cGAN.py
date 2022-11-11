@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 class Generator(nn.Module):
     def __init__(self, hidden_channels = [256, 128, 64], kernel_size_list = [3, 4, 3, 4], stride_list = [2, 1, 2, 2], input_dim=1, im_chan=1):
