@@ -52,6 +52,5 @@ class Discriminator(nn.Module):
       x = image
       for i in range(len(self.h_layers) - 1):
         x = self.h_layers[i](x)
-      disc_pred = self.h_layers[-1](x)
       
-      return disc_pred.view(len(disc_pred), -1)
+      return disc_pred.view(len(self.h_layers[-1](x)), -1)
