@@ -48,10 +48,10 @@ class Discriminator(nn.Module):
         #Final layer convolution
         self.h_layers.extend([nn.Conv2d(hidden_dimensions[-1], 1, kernel_size, stride)])
         
-        
     def forward(self, image):
       x = image
       for i in range(len(self.h_layers) - 1):
         x = self.h_layers[i](x)
       disc_pred = self.h_layers[-1](x)
+      
       return disc_pred.view(len(disc_pred), -1)
