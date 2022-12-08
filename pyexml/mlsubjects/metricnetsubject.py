@@ -208,7 +208,8 @@ class AAECNNSubject(NeuralNetSubject):
     
     def build_subject(self, name = "AAE Subject"):
         super().__init__(self.aae_coach, alt_name= name + self.connectivity)
-        
+
+
 class MetricDynamicFFWDSubject(NeuralNetSubject):
 
     def __init__(self, domain_path, image=None, metric_precompute_path=None, connectivity = 'random_partial', v_ratio = 0.2, train_ratio = 0.7, subspace_ratio = 0.2):

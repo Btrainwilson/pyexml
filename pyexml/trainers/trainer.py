@@ -10,7 +10,7 @@ class Trainer():
 
     __name__ = "Trainer"
 
-    def __init__(self, model, dataset, criterion, optimizer, scheduler, alt_name=None, batch_size = 40):
+    def __init__(self, model, dataset, criterion, optimizer, scheduler, alt_name=None, batch_size = 40, state_save_mod = 25):
         
         self.dataset = dataset
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=batch_size, shuffle=True)
@@ -19,6 +19,7 @@ class Trainer():
         self.scheduler = scheduler
         self.model = model
         self.batch_size = batch_size
+        self.state_save_mod = state_save_mod
 
         self.info_dict = {}
         self.info_dict['Name'] = self.__name__
@@ -47,9 +48,9 @@ class Trainer():
         num_batches = len(self.dataloader)
 
         for batch_idx, samples in enumerate(self.dataloader):
-
+            
             v = self.model(samples[0])   #v - Model output, u is expected output. Returned by model for better abstraction to isolate Trainer from model dependent sample handling.
-            loss = self.criterion(v, samples[1])
+            loss = self.criterion(samples[1], v)
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -60,8 +61,16 @@ class Trainer():
         
 
         self.call_dict['Loss'].append(total_loss / num_batches)
-        self.call_dict['Model State'].append(copy.deepcopy(self.model.state_dict()))
-        self.call_dict['Optimizer State'].append(copy.deepcopy(self.optimizer.state_dict()))
+
+        if self.state_save_mod == -1:
+
+            self.call_dict['Model State'] = [self.model.state_dict()]
+            self.call_dict['Optimizer State'] = [self.optimizer.state_dict()]
+
+        elif ('epoch' in kwargs and kwargs['epoch'] % self.state_save_mod == 0) or (not 'epoch' in kwargs):
+            
+            self.call_dict['Model State'].append(copy.deepcopy(self.model.state_dict()))
+            self.call_dict['Optimizer State'].append(copy.deepcopy(self.optimizer.state_dict()))
 
         self.scheduler.step()
 

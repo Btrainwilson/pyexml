@@ -13,6 +13,13 @@ class MapDataset(Dataset):
         self.info_dict['Assignments'] = []
         self.info_dict['Subspace'] = subspace
 
+        if device is None:
+            self.device = torch.device("cpu")
+        else:
+            self.device = device
+
+        self.info_dict['device'] = self.device
+
         if subspace is not None:
             self.domain = domain[subspace]
             self.image = image[subspace]
@@ -20,8 +27,8 @@ class MapDataset(Dataset):
             self.domain = domain
             self.image = image
 
-        self.domain = torch.tensor(self.domain, dtype=torch.float32)
-        self.image = torch.tensor(self.image, dtype=torch.float32)
+        self.domain = torch.tensor(self.domain, dtype=torch.float32, device=self.device)
+        self.image = torch.tensor(self.image, dtype=torch.float32, device=self.device)
 
         self.subspace = subspace
 
@@ -32,12 +39,9 @@ class MapDataset(Dataset):
             self.assignment = assignment
             self.info_dict['Assignments'] = [assignment]
 
-        if device is None:
-            self.device = torch.device("cpu")
-        else:
-            self.device = device
+
         
-        self.info_dict['device'] = self.device
+        
 
     def __getitem__(self, idx):
 

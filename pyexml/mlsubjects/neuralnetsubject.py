@@ -25,3 +25,6 @@ class NeuralNetSubject(pylab.TestSubject):
             out_str += "%s Loss: %f \n" % (trainer_id, self.test_dict['Data'][trainer_id]['Loss'][-1])
 
         return out_str
+
+    def analysis(self):
+        pass

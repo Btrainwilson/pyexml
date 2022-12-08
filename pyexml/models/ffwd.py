@@ -8,8 +8,6 @@ class Simple_FFWDNet(Model):
 
     def __init__(self, bit_num, real_num, layers=5, latent_size=50, device = torch.device("cpu")):
         super().__init__()
-
-        
         self.bit_num = bit_num
         self.real_num = real_num
         self.layers = layers

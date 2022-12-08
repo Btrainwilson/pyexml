@@ -23,18 +23,28 @@ class AutoEncoder(Model):
 
         return x
 
-class VariatonalEncoder(Model):
+class VariatonalAutoEncoder(Model):
 
-    def __init__(self, encoder, sampler):
+    def __init__(self, encoder, decoder):
         super().__init__()
         self.encoder = encoder
-        self.sampler = sampler
+        self.sampler = decoder
         self.info_dict['Encoder Info'] = get_info(self.encoder)
-        self.info_dict['Sampler Info'] = get_info(self.sampler)
+        self.info_dict['Decoder Info'] = get_info(self.decoder)
+
 
     def forward(self, x):
 
         x = self.encoder(x)
-        z = self.sampler(x)
+        z = self.decoder(x)
+
+        return z
+
+class ConditionalVAE(VariatonalAutoEncoder):
+
+    def forward(self, x, c):
+
+        x = self.encoder(x, c)
+        z = self.decoder(x)
 
         return z
