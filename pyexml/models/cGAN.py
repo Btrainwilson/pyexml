@@ -54,3 +54,13 @@ class Discriminator(nn.Module):
         x = self.h_layers[i](x)
       
       return disc_pred.view(len(self.h_layers[-1](x)), -1)
+
+class cGAN():
+    def __init__(self, Generator, Discriminator):
+        self.Generator = Generator
+        self.Discriminator = Discriminator
+
+class cGAN_Optimizer():
+    def __init__(self, Generator_Optimizer, Discriminator_Optimizer):
+        self.Generator_Optimizer = Generator_Optimizer
+        self.Discriminator_Optimizer = Discriminator_Optimizer
