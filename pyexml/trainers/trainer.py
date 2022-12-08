@@ -5,6 +5,7 @@ from pyexlab.utils import get_info
 from ..datasets.utils import DataMode
 import numpy as np
 import copy
+import torch.nn.functional as F
 
 class Trainer():
 
@@ -172,86 +173,61 @@ class DynamicLSATrainer(Trainer):
         return self.call_dict
 
 ###Michael Bezick's Code###
-#1. where should functions go?
-#2. how is **kwargs used without a loop or is this intended for future development?
-#3. my code has the generator and discriminator objects passed in separately, opposed to a single model. Is this okay?
-#4. how can I find the number of classes and dimensions of the images from the dataloader without having the user
-#   have to manually input them?
-#5. does the hidden layer dimensions and kernel size etc. customizations need to be passed into the trainer or
-#   should they be present somewhere else?
-#6. should I only have the layer dimensions customizable and then create functions to calculate kernel size and stride automatically,
-#   or is manual entry of both okay?
-#7. is "self." only necessary when the variable objects are used in other functions/methods within the same class? Does "self." make these
-#   variables global to the class?
+
+#1. How do I handle Cuda?
+#2. Does the dataloader need to tensor transform and normalization transform?
+
 class cGANTrainer(Trainer):
     __name__ = "cGANTrainer"
-    def __init__(self, generator, discriminator, dataset, criterion, optimizer, scheduler, epoch_mod = -1, \
-                 alt_name=None, batch_size = 40, z_dim, dataset_shape, n_classes, gen_hidden_channels = [256, 128, 64], \
-                 gen_kernel_size_list = [3, 4, 3, 4], gen_stride_list = [2, 1, 2, 2], gen_input_dim=1, disc_im_chan=1, \
-                 disc_hidden_dimensions = [64, 128], disc_kernel_size = 4, disc_stride = 2): 
+    def __init__(self, model, dataset, criterion, optimizer, scheduler, n_classes, z_dim, epoch_mod = -1, alt_name=None, batch_size = 32, device = 'cpu'): 
              
         if alt_name is None:
             alt_name = "cGANTrainer"
 
-        super().__init__(dataset, criterion, optimizer, scheduler, alt_name=alt_name, batch_size = batch_size)
+        super().__init__(model, dataset, criterion, optimizer, scheduler, alt_name=alt_name, batch_size = batch_size)
 
-        self.generator = generator
-        self.discriminator = discriminator
-        self.z_dim = z_dim #length of noise vector
-        self.dataset_shape = dataset_shape 
+        self.Generator = model.Generator
+        self.Discriminator = model.Discriminator
+        self.device = device
         self.n_classes = n_classes
-        self.gen_hidden_channels = gen_hidden_channels
-        self.gen_kernel_size_list = gen_kernel_size_list
-        self.gen_stride_list = gen_stride_list
-        self.gen_input_dim = input_dim
-        self.disc_im_chan = disc_im_chan
-        self.disc_hidden_dimensions = disc_hidden_dimensions
-        self.disc_kernel_size = disc_kernel_size
-        self.disc_stride = disc_stride
+        self.z_dim = z_dim
+        self.Generator_Optimizer = optimizer.Generator_Optimizer
+        self.Discriminator_Optimizer = optimizer.Discriminator_Optimizer
 
-##Find out how to automatically find n_classes, channels, input_dim, etc.
     def __call__(self, **kwargs):
 
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True)
-
-        generator_input_dim, discriminator_im_chan, im_chan = get_input_dimensions(self.z_dim, self.dataset_shape, self.n_classes)
-
+        
         total_gen_loss = 0
         total_disc_loss = 0
 
         num_batches = len(self.dataloader)
 
         ##my code##
-        for batch_idx, samples in enumerate(self.dataloader):
+        for real, labels in self.dataloader:
             
             #creating and concatenating one hot labels
             one_hot_labels = get_one_hot_labels(labels.to(self.device), self.n_classes)
             image_one_hot_labels = one_hot_labels[:,:, None, None]
             image_one_hot_labels = image_one_hot_labels.repeat(1, 1, self.dataset_shape[1], self.dataset_shape[2])
             
-            disc_opt.zero_grad()
+            self.Discriminator_Optimizer.zero_grad()
 
             fake_noise = get_noise(self.batch_size, self.z_dim, device=self.device)
             noise_and_labels = combine_vectors(fake_noise, one_hot_labels)
 
             #generation of fake
-            fake = self.generator(noise_and_labels, hidden_channels = self.gen_hidden_channels,\
-                                  kernel_size_list = self.gen_kernel_size_list, stride_list = self.gen_stride_list, \
-                                  input_dim = self.gen_input_dim)
+            fake = self.Generator(noise_and_labels)
 
             #combining images and labels for discriminator
             fake_image_and_labels = combine_vectors(fake, image_one_hot_labels)
-            real_image_and_labels = combine_vectors(samples[0], image_one_hot_labels)
+            real_image_and_labels = combine_vectors(real, image_one_hot_labels)
            
             #using discriminator
-            disc_fake_pred = self.discriminator(fake_image_and_labels.detach(), im_chan = self.disc_im_chan, \
-                                                hidden_dimensions = self.disc_hidden_dimensions, \
-                                                kernel_size = self._disc_kernel_size, stride = self.disc_stride)
+            disc_fake_pred = self.Discriminator(fake_image_and_labels.detach())
             
-            disc_real_pred = self.discriminator(real_image_and_labels, im_chan = self.disc_im_chan, \
-                                                hidden_dimensions = self.disc_hidden_dimensions, \
-                                                kernel_size = self._disc_kernel_size, stride = self.disc_stride)
-
+            disc_real_pred = self.Discriminator(real_image_and_labels)
+            
             #calculating loss
             #zeros and ones vector tells discriminator whether images are fake or real
             disc_fake_loss = self.criterion(disc_fake_pred, torch.zeros_like(disc_fake_pred))
@@ -262,26 +238,26 @@ class cGANTrainer(Trainer):
 
             #backpropagation through discriminator
             disc_loss.backward(retain_graph=True)
-            disc_opt.step()
+            self.Discriminator_Optimizer.step()
             
             ###Updating Generator###
 
             #zeroing out gradient
-            gen_opt.zero_grad()
+            self.Generator_Optimizer.zero_grad()
     
             #combining fake images with broadcast labels
             fake_image_and_labels = combine_vectors(fake, image_one_hot_labels)
 
             #calculating loss for fakes
-            disc_fake_pred = self.discriminator(fake_image_and_labels, im_chan = self.disc_im_chan, \
-                                                hidden_dimensions = self.disc_hidden_dimensions, \
+            disc_fake_pred = self.discriminator(fake_image_and_labels, im_chan = self.disc_im_chan, 
+                                                hidden_dimensions = self.disc_hidden_dimensions, 
                                                 kernel_size = self._disc_kernel_size, stride = self.disc_stride)
             
-            gen_loss = criterion(disc_fake_pred, torch.ones_like(disc_fake_pred))
+            gen_loss = self.criterion(disc_fake_pred, torch.ones_like(disc_fake_pred))
 
             #backpropagation through generator
             gen_loss.backward()
-            gen_opt.step()
+            self.Generator_Optimizer.step()
 
         self.call_dict['Generator Loss'].append(gen_loss / num_batches)
         self.call_dict['Discriminator Loss'].append(disc_loss / num_batches)
