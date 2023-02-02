@@ -5,7 +5,8 @@ import functools
 from ..utilities import get_cuda
 from ..trainers import Trainer, Tester
 from ..datasets.utils import split_indeces
-from ..datasets.dynamic import SimpleDataset
+from ..datasets.dynamic import SimpleDataset, MapDataset
+from ..backend import device as backend_device
 
 class NeuralNetSubject(pylab.TestSubject):
     __name__ = "NeuralNetSubject"
@@ -86,10 +87,11 @@ class ModularNeuralNetSubject(NeuralNetSubject):
 
 class SimpleNetSubject(ModularNeuralNetSubject):
 
-    def __init__(self, dataset, model, lr=0.0001, train_test_r = 0.8):
+    def __init__(self, data, labels, model, lr=0.0001, train_test_r = 0.8):
 
         self.model = model
-        self.dataset = dataset
+        self.dataset = data
+        self.labels = labels
         self.train_test_ratio = train_test_r
 
         super(SimpleNetSubject, self).__init__("", lr)
@@ -103,5 +105,5 @@ class SimpleNetSubject(ModularNeuralNetSubject):
         subset_idx = split_indeces(len(self.dataset), training_size, len(self.dataset))
 
         #Create training and testing datasets 
-        self.training_dataset = SimpleDataset(self.dataset[subset_idx[0]])
-        self.testing_dataset = SimpleDataset(self.dataset[subset_idx[1]])
+        self.training_dataset = MapDataset(self.dataset[subset_idx[0]], self.labels[subset_idx[0]], device=backend_device)
+        self.testing_dataset = MapDataset(self.dataset[subset_idx[1]], self.labels[subset_idx[1]], device=backend_device)

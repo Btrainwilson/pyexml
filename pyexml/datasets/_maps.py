@@ -39,10 +39,6 @@ class MapDataset(Dataset):
             self.assignment = assignment
             self.info_dict['Assignments'] = [assignment]
 
-
-        
-        
-
     def __getitem__(self, idx):
 
         idx_hat = self.assignment[idx]
