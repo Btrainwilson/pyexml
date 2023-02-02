@@ -23,6 +23,8 @@ class AutoEncoder(Model):
 
         return x
 
+
+
 class VariatonalAutoEncoder(Model):
 
     def __init__(self, encoder, decoder):

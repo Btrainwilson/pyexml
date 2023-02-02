@@ -33,7 +33,7 @@ class MapDataset(Dataset):
         self.subspace = subspace
 
         if assignment is None:
-            self.assignment = maps.Map(list(range(len(domain))))
+            self.assignment = maps.Map(torch.arange(0, len(domain), dtype=torch.int64, device=self.device))
             self.info_dict['Assignments'] = [list(range(len(domain)))]
         else:
             self.assignment = assignment

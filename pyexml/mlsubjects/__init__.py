@@ -1,2 +1,2 @@
 from .metricnetsubject import MetricStaticFFWDSubject
-from .neuralnetsubject import NeuralNetSubject
+from .neuralnetsubject import NeuralNetSubject, ModularNeuralNetSubject

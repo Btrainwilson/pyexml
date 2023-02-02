@@ -1,4 +1,4 @@
-__all__ = ["datasets", "models", "trainers","generators","geometry", "mlsubjects", "utilities", "plot"]
+__all__ = ["datasets", "transformations", "backend", "models", "trainers","generators","geometry", "mlsubjects", "utilities", "plot", "distributions"]
 
 from . import datasets
 from . import generators
@@ -8,3 +8,6 @@ from . import models
 from . import trainers
 from . import plot
 from . import utilities
+from . import distributions
+from . import backend
+from . import transformations

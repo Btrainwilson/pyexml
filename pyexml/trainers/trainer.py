@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.cuda.amp import autocast
 from ..geometry.maps.utils import optimal_diffeomorphism_LSA
 from pyexlab.utils import get_info
 from ..datasets.utils import DataMode
@@ -7,85 +8,159 @@ import numpy as np
 import copy
 import torch.nn.functional as F
 
-class Trainer():
+class ModelProcess():
 
-    __name__ = "Trainer"
+    """
+    Asynchronous process that feeds a model data, saves the state, and stores the output.
+    """
 
-    def __init__(self, model, dataset, criterion, optimizer, scheduler, alt_name=None, batch_size = 40, state_save_mod = 25):
+    def __init__(self, model, dataset, batch_size = 40, state_save_mod = 25):
         
         self.dataset = dataset
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=batch_size, shuffle=True)
-        self.criterion = criterion
-        self.optimizer = optimizer
-        self.scheduler = scheduler
+
         self.model = model
         self.batch_size = batch_size
         self.state_save_mod = state_save_mod
 
+        self.id_n = type(self).__name__
+
         self.info_dict = {}
-        self.info_dict['Name'] = self.__name__
+        self.info_dict['Name'] = type(self).__name__
         self.info_dict['Dataset Info'] = get_info(self.dataset)
         self.info_dict['Model Info'] = get_info(self.model)
+
+
+        self.call_dict = {}
+        self.call_dict['Loss'] = []
+        self.call_dict['Model State'] = []
+        self.call_dict['Output String'] = ""
+
+    def __init_call__(self, **kwargs):
+        pass
+
+    def __loop_call__(self, samples):
+        pass
+
+    def __final_call__(self, **kwargs):
+        
+        if self.state_save_mod == -1:
+            self.call_dict['Model State'] = [self.model.state_dict()]
+
+        elif ('epoch' in kwargs and kwargs['epoch'] % self.state_save_mod == 0) or (not 'epoch' in kwargs):
+            self.call_dict['Model State'].append(copy.deepcopy(self.model.state_dict()))
+
+    def __call__(self, **kwargs):
+
+        #Build dataloader
+        self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True)
+
+        #Initial call function
+
+        self.__init_call__(**kwargs)
+
+        #Process Loop
+        for batch_idx, samples in enumerate(self.dataloader):
+            self.__loop_call__(samples)
+        
+        #After loop calls
+        self.__final_call__(**kwargs)
+            
+        return { self.id_n : self.call_dict}
+
+    def info(self):
+        return {self.id_n : self.info_dict}
+
+    def id(self, idx):
+        self.id_n = type(self).__name__ + str(idx)
+        return self.id_n
+
+class Trainer(ModelProcess):
+
+    def __init__(self, model, dataset, criterion, optimizer, scheduler, batch_size = 40, state_save_mod = 25):
+        
+        super().__init__(model, dataset, batch_size, state_save_mod)
+
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+
         self.info_dict['Criterion Name'] = type(self.criterion).__name__
         self.info_dict['Optimizer Name'] = type(self.optimizer).__name__
         self.info_dict['Scheduler Name'] = type(self.scheduler).__name__
         self.info_dict['Batch Size'] = self.batch_size
 
-        self.call_dict = {}
-        self.call_dict['Loss'] = []
-        self.call_dict['Model State'] = []
         self.call_dict['Optimizer State'] = []
 
-        if not alt_name is None:
-            self.__name__ = alt_name
+    def __init_call__(self, **kwargs):
+        self.total_loss = 0
+        self.total_loss_dict = {}
+        return super().__init_call__(**kwargs)
 
+    def __final_call__(self, **kwargs):
+
+        self.call_dict['Output String'] = self.id_n + " : "
+        for loss_id in self.total_loss_dict:
+            self.call_dict['Output String'] += "%s : %f || " %(loss_id, self.total_loss_dict[loss_id])
+
+        self.call_dict['Output String'] += "\n"
+
+        for key in self.total_loss_dict:
+            if key in self.call_dict:
+                self.call_dict[key].append(self.total_loss_dict[key])
+            else:
+                self.call_dict[key] = [self.total_loss_dict[key]]
+
+        return super(Trainer, self).__final_call__(**kwargs)
+
+    def __loop_call__(self, samples):
+        with autocast():
+            v = self.model(samples[0])
+            loss_dict = self.model.loss(samples[1], v)
+
+        self.optimizer.zero_grad()
+        loss_dict['Total'].backward()
+        self.optimizer.step()
+
+        #Update losses
+        for key in loss_dict:
+            if key in self.total_loss_dict:
+                self.total_loss_dict[key] += loss_dict[key].item()
+            else:
+                self.total_loss_dict[key] = loss_dict[key].item()
+        if self.scheduler is not None:
+            self.scheduler.step()
+
+class Tester(Trainer):
+
+    def __init__(self, model, dataset, criterion, batch_size = 40, state_save_mod = 25):
         
-        
+        super(Tester, self).__init__(model, dataset, batch_size, state_save_mod, scheduler=None)
+
+        self.criterion = criterion
+
+        self.info_dict['Criterion Name'] = type(self.criterion).__name__
+        self.info_dict['Batch Size'] = self.batch_size
+
+    def __loop_call__(self, samples):
+
+        v = self.model(samples[0])
+        loss_dict = self.model.loss(samples[1], v)
+
+        #Update losses
+        for key in loss_dict:
+            if key in self.total_loss_dict:
+                self.total_loss_dict[key] += loss_dict[key].item()
+            else:
+                self.total_loss_dict[key] = loss_dict[key].item()
+
+
     def __call__(self, **kwargs):
-
-        self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True)
-
-        total_loss = 0
-        num_batches = len(self.dataloader)
-
-        for batch_idx, samples in enumerate(self.dataloader):
-            
-            v = self.model(samples[0])   #v - Model output, u is expected output. Returned by model for better abstraction to isolate Trainer from model dependent sample handling.
-            loss = self.criterion(samples[1], v)
-
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-
-            total_loss += loss.item()
-
-        
-
-        self.call_dict['Loss'].append(total_loss / num_batches)
-
-        if self.state_save_mod == -1:
-
-            self.call_dict['Model State'] = [self.model.state_dict()]
-            self.call_dict['Optimizer State'] = [self.optimizer.state_dict()]
-
-        elif ('epoch' in kwargs and kwargs['epoch'] % self.state_save_mod == 0) or (not 'epoch' in kwargs):
-            
-            self.call_dict['Model State'].append(copy.deepcopy(self.model.state_dict()))
-            self.call_dict['Optimizer State'].append(copy.deepcopy(self.optimizer.state_dict()))
-
-        self.scheduler.step()
-
-        return self.call_dict 
-
-    def info(self, epoch = 0):
-        return self.info_dict
-
-    def id(self, idx):
-        return self.__name__ + str(idx)
+        with torch.no_grad():
+            return super().__call__(**kwargs)
 
 
-
-class Tester():
+"""class Tester(Trainer):
 
     __name__ = "Tester"
 
@@ -153,33 +228,29 @@ class Tester():
         return self.info_dict
 
     def id(self, idx):
-        return self.__name__ + str(idx)
+        return self.__name__ + str(idx)"""
 
 class DynamicLSATrainer(Trainer):
-    __name__ = "DynamicLSATrainer"
-    def __init__(self, model, dataset, criterion, optimizer, scheduler, epoch_mod = -1, alt_name=None):
 
-        if alt_name is None:
-            alt_name = "DynamicLSATrainer"
+    def __init__(self, model, dataset, criterion, optimizer, scheduler, batch_size = 40, state_save_mod = 25):
 
-        super().__init__(model, dataset, criterion, optimizer, scheduler, alt_name=alt_name)
+        super().__init__(model, dataset, criterion, optimizer, scheduler, batch_size, state_save_mod)
 
-        self.epoch_mod = epoch_mod
-
-        self.info_dict['Epoch Mod'] = epoch_mod
         self.call_dict['Assignments'] = [self.dataset.get_assignment()]
 
-    def __call__(self, **kwargs):
+    def __final_call__(self, **kwargs):
 
-        super().__call__(**kwargs)
+        if self.state_save_mod == -1:
+            self.call_dict['Model State'] = [self.model.state_dict()]
 
-        if (self.epoch_mod != -1) and ('epoch' in kwargs) and (kwargs['epoch'] % self.epoch_mod == 0):
-
+        elif ('epoch' in kwargs and kwargs['epoch'] % self.state_save_mod == 0) or (not 'epoch' in kwargs):
+            self.call_dict['Model State'].append(copy.deepcopy(self.model.state_dict()))
             new_assignment = optimal_diffeomorphism_LSA(self.dataset.domain, self.dataset.image, self.model)    #Maybe make universal class with function pointer for assignments?
             self.dataset.reassign(new_assignment)
             self.call_dict['Assignments'].append(new_assignment)
 
-        return self.call_dict
+
+
 
 ###Michael Bezick's Code###
 

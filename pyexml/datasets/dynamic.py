@@ -1,8 +1,8 @@
 from torch.utils.data import Dataset
 import pyexlab.fileio as fio
 
-class DynamicDataset(Dataset):
-    __name__ = "DynamicDataset"
+class SimpleDataset(Dataset):
+    __name__ = "SimpleDataset"
     def __init__(self, dataset):
         
         if type(dataset) == str:

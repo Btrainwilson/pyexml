@@ -59,6 +59,7 @@ class cGAN():
     def __init__(self, Generator, Discriminator):
         self.Generator = Generator
         self.Discriminator = Discriminator
+    
 
 class cGAN_Optimizer():
     def __init__(self, Generator_Optimizer, Discriminator_Optimizer):
