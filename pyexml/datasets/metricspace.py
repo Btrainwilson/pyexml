@@ -1,11 +1,11 @@
 from xmlrpc.client import Boolean
-from .dynamic import DynamicDataset
+from .dynamic import SimpleDataset
 import numpy as np
 import torch
 from pyexlab.utils import get_info
 
 #Returns two points in a metric space and their metric distance
-class MetricSpaceDataset(DynamicDataset):
+class MetricSpaceDataset(SimpleDataset):
 
     def __init__(self, metric, space, precompute = None, subspace = None, device = torch.device("cpu"), dtype = torch.float32):
 
