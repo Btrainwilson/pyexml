@@ -5,7 +5,8 @@ import functools
 from ..utilities import get_cuda
 from ..trainers import Trainer, Tester
 from ..datasets.utils import split_indeces
-from ..datasets.dynamic import SimpleDataset, MapDataset
+from ..datasets.dynamic import SimpleDataset
+from ..datasets._maps import MapDataset
 from ..backend import device as backend_device
 
 class NeuralNetSubject(pylab.TestSubject):
