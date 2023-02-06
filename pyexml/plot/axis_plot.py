@@ -128,12 +128,33 @@ def plot_image(data, fig, cmap = 'gray'):
     None
 
     Side Effects:
-    Displays the image in the specified matplotlib axis and modifies the appearance of the axis.
+    Displays the image in the specified matplotlib axis and modifies the appearance of the axis. Will automatically normalize if the data is not of type uint8 between 0 and 255 or float between 0 and 1.
 
     Example:
     fig, ax = plt.subplots()
     plot_image(image_data, fig)
     """
+    if len(data.shape) == 3:
+        if data.shape[0] == 3:
+            data = np.transpose(data, (1,2,0))
+
+    #Check if image data is valid
+    if isinstance(data, np.ndarray) == False:
+        raise TypeError("Image data must be a numpy array")
+
+    if np.issubdtype(data.flat[0], np.integer):
+        if np.max(data) > 255 or np.min(data) < 0:
+            #Normalize image data
+            data = (data - np.min(data)) / (np.max(data) - np.min(data)) * 255
+            data.astype('uint8')
+
+    elif np.issubdtype(data.flat[0], np.floating):
+        if np.max(data) > 1 or np.min(data) < 0:
+            #Normalize image data
+            data = (data - np.min(data)) / (np.max(data) - np.min(data))
+    else:
+        raise TypeError("Image data must be of type int or float")
+
     #Display image in current subplot
     fig.imshow(data, cmap=cmap)
     

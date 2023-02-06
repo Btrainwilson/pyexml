@@ -56,12 +56,3 @@ def choose_best_device():
 
     else:
         return torch.device("cpu")
-
-# Example usage:
-device = choose_best_device()
-print(f"The best available device is {device}")
-
-
-# Example usage:
-device = choose_best_device()
-print(f"The best available device is {device}")

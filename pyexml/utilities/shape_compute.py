@@ -1,3 +1,5 @@
+import torch
+
 def conv2dtrans_out_shape(H_in, k, s, p_i, p_o, d):
     """
     Compute the output channel shape of a list of sequential conv2dtranspose layers. 
@@ -82,7 +84,7 @@ def conv2d_out_shape(H_in, k, s, p_i, d):
         k (List[int]): kernel size.
         s (List[int]): stride.
         p_i (List[int]): input padding.
-        p_o (List[int]): output padding.
+
         d (List[int]): dilation.
 
     Returns:
@@ -91,15 +93,13 @@ def conv2d_out_shape(H_in, k, s, p_i, d):
     if len(H_in) == 1:
         H_in = (H_in[0], H_in[0])
     if len(k) == 1:
-        k = (k[0], k[0])
+        k = [k, k]
     if len(s) == 1:
-        s = (s[0], s[0])
+        s = [s, s]
     if len(p_i) == 1:
-        p_i = (p_i[0], p_i[0])
-    if len(p_o) == 1:
-        p_o = (p_o[0], p_o[0])
+        p_i = [p_i, p_i]
     if len(d) == 1:
-        d = (d[0], d[0])
+        d = [d, d]
 
     H_out = H_in[0]
     W_out = H_in[1]
@@ -148,3 +148,22 @@ def conv2d_in_shape(H_out, k, s, p_i, d):
     
     return (H_in, W_in)
 
+def compute_output_shape(in_shape, model):
+    """Compute the output shape of a tensor by passing it through a dummy network
+    
+    Args:
+        in_shape (tuple): input shape of the tensor, include batch dimension
+        model (torch.nn.Module): the model to be used
+
+    Returns:
+        torch.tensor: output shape of the tensor
+
+    """
+
+    dummy_input = torch.rand(in_shape)
+    try:
+        dummy_output = model(dummy_input)
+    except:
+        raise ValueError("The input shape is not compatible with the model")
+    
+    return torch.tensor(dummy_output.shape)

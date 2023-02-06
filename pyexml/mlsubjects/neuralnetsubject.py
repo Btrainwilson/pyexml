@@ -11,11 +11,12 @@ from ..backend import device as backend_device
 
 class NeuralNetSubject(pylab.TestSubject):
     __name__ = "NeuralNetSubject"
-    def __init__(self, trainers, alt_name = None):
+    def __init__(self, trainers, alt_name = None, device = backend_device):
         
         super().__init__(name=alt_name)
 
         self.trainers = trainers
+        self.device = device
         
         #Initialize Neural Net Values
         self.test_dict['Data'] = {}
@@ -73,11 +74,11 @@ class ModularNeuralNetSubject(NeuralNetSubject):
                                     dataset = self.training_dataset, 
                                     criterion = self.model.loss, 
                                     optimizer = self.optimizer, 
-                                    scheduler = self.scheduler(self.optimizer), 
+                                    scheduler = self.scheduler(self.optimizer), batch_size=1000,
                                     state_save_mod=-1)
 
         self.model_tester  = Tester(model=self.model, 
-                                    dataset = self.testing_dataset, 
+                                    dataset = self.testing_dataset, batch_size=1000,
                                     criterion = self.model.loss)
         
         #Construct the trainer list
@@ -88,7 +89,7 @@ class ModularNeuralNetSubject(NeuralNetSubject):
 
 class SimpleNetSubject(ModularNeuralNetSubject):
 
-    def __init__(self, data, labels, model, lr=0.0001, train_test_r = 0.8):
+    def __init__(self, data, labels, model, lr=0.0001, train_test_r = 0.8, ):
 
         self.model = model
         self.dataset = data
@@ -96,6 +97,7 @@ class SimpleNetSubject(ModularNeuralNetSubject):
         self.train_test_ratio = train_test_r
 
         super(SimpleNetSubject, self).__init__("", lr)
+        self.model.to(self.device)
 
     def init_dataset(self):
 
@@ -108,3 +110,6 @@ class SimpleNetSubject(ModularNeuralNetSubject):
         #Create training and testing datasets 
         self.training_dataset = MapDataset(self.dataset[subset_idx[0]], self.labels[subset_idx[0]], device=backend_device)
         self.testing_dataset = MapDataset(self.dataset[subset_idx[1]], self.labels[subset_idx[1]], device=backend_device)
+
+    def analysis(self):
+        return self.test_dict['Data']

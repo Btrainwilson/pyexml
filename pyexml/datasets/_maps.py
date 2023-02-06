@@ -2,11 +2,12 @@ from torch.utils.data import Dataset
 import torch
 from ..geometry import maps
 from .utils import split_indeces, DataMode
+from ..backend import device as backend_device
 
 
 class MapDataset(Dataset):
 
-    def __init__(self, domain, image, device=None, assignment=None, subspace = None):
+    def __init__(self, domain, image, device=backend_device, assignment=None, subspace = None):
 
         self.info_dict = {}
         self.info_dict['Name'] = "MapDataset"

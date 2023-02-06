@@ -1,5 +1,5 @@
 import torch
-from ..utilities.cuda import get_best_device
+from ..utilities.cuda import choose_best_device
 
 #Initialize package variables
 
@@ -7,7 +7,7 @@ from ..utilities.cuda import get_best_device
 default_dtype = torch.float32
 
 #Default device for all models
-device = get_best_device()
+device = choose_best_device()
 
 #Parallelize models onto cluster
 cluster_enabled = False
